@@ -52,30 +52,33 @@ const slackClient = new WebClient(process.env.SLACK_BOT_TOKEN);
 const userClient = new WebClient(process.env.SLACK_USER_TOKEN);
 
 // Validation function for Slack mrkdwn compatibility
-function validateSlackMessage(text: string): { isValid: boolean; errors: string[] } {
+function validateSlackMessage(text: string): {
+  isValid: boolean;
+  errors: string[];
+} {
   const errors: string[] = [];
-  
+
   // Check message length (Slack API limit is 12,000 characters)
   if (text.length > 12000) {
     errors.push(
       `Message too long (${text.length} chars). Slack API limit is 12,000 characters. Please split into multiple messages.`
     );
   }
-  
+
   // Check for double asterisks (should be single for Slack)
   if (text.includes('**')) {
     errors.push(
       'Use *text* for bold in Slack, not **text**. Please replace **bold** with *bold*.'
     );
   }
-  
+
   // Check for double underscores (should be single for Slack)
   if (text.includes('__')) {
     errors.push(
       'Use _text_ for italic in Slack, not __text__. Please replace __italic__ with _italic_.'
     );
   }
-  
+
   // Check for markdown links (Slack uses different format)
   const markdownLinkPattern = /\[([^\]]+)\]\(([^)]+)\)/g;
   if (markdownLinkPattern.test(text)) {
@@ -83,10 +86,10 @@ function validateSlackMessage(text: string): { isValid: boolean; errors: string[
       'Use <url|text> for links in Slack, not [text](url). Please replace [text](url) with <url|text>.'
     );
   }
-  
+
   return {
     isValid: errors.length === 0,
-    errors
+    errors,
   };
 }
 
@@ -150,12 +153,14 @@ function createServer(): Server {
         },
         {
           name: 'slack_post_message',
-          description: 'Post a new message to a Slack channel\n\nNote: Slack uses mrkdwn format:\n- Bold: *text* (not **text**)\n- Italic: _text_ (not __text__)\n- Links: <url|text> (not [text](url))\n- Code: `text` or ```code block```',
+          description:
+            'Post a new message to a Slack channel\n\nNote: Slack uses mrkdwn format:\n- Bold: *text* (not **text**)\n- Italic: _text_ (not __text__)\n- Links: <url|text> (not [text](url))\n- Code: `text` or ```code block```',
           inputSchema: zodToJsonSchema(PostMessageRequestSchema),
         },
         {
           name: 'slack_reply_to_thread',
-          description: 'Reply to a specific message thread in Slack\n\nNote: Slack uses mrkdwn format:\n- Bold: *text* (not **text**)\n- Italic: _text_ (not __text__)\n- Links: <url|text> (not [text](url))\n- Code: `text` or ```code block```',
+          description:
+            'Reply to a specific message thread in Slack\n\nNote: Slack uses mrkdwn format:\n- Bold: *text* (not **text**)\n- Italic: _text_ (not __text__)\n- Links: <url|text> (not [text](url))\n- Code: `text` or ```code block```',
           inputSchema: zodToJsonSchema(ReplyToThreadRequestSchema),
         },
         {
@@ -225,13 +230,15 @@ function createServer(): Server {
 
         case 'slack_post_message': {
           const args = PostMessageRequestSchema.parse(request.params.arguments);
-          
+
           // Validate message format
           const validation = validateSlackMessage(args.text);
           if (!validation.isValid) {
-            throw new Error(`Message validation failed:\n${validation.errors.join('\n')}`);
+            throw new Error(
+              `Message validation failed:\n${validation.errors.join('\n')}`
+            );
           }
-          
+
           const response = await slackClient.chat.postMessage({
             channel: args.channel_id,
             text: args.text,
@@ -248,13 +255,15 @@ function createServer(): Server {
           const args = ReplyToThreadRequestSchema.parse(
             request.params.arguments
           );
-          
+
           // Validate message format
           const validation = validateSlackMessage(args.text);
           if (!validation.isValid) {
-            throw new Error(`Message validation failed:\n${validation.errors.join('\n')}`);
+            throw new Error(
+              `Message validation failed:\n${validation.errors.join('\n')}`
+            );
           }
-          
+
           const response = await slackClient.chat.postMessage({
             channel: args.channel_id,
             thread_ts: args.thread_ts,
